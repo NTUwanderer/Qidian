@@ -14,19 +14,20 @@ class downloader(object):
         self.chapterHrefs = []
         self.chapterNum = 0
         self.session = requests.Session()
-        options = webdriver.ChromeOptions()
-        options.add_argument('headless')
-        self.browser = webdriver.Chrome(chrome_options=options)
+        # options = webdriver.ChromeOptions()
+        # options.binary="/usr/bin/google-chrome-stable"
+        # options.add_argument('user-data-dir=/home/harvey/.config/google-chrome/Default')
+        # self.browser = webdriver.Chrome(options=options)
+        self.browser = webdriver.Chrome()
     def GetChapterInfo(self):#獲取章節名稱和連結
-        # req = self.session.get(url=self.target)
-        # req.raise_for_status()
-        # req.encoding = req.apparent_encoding
-        # html = req.text
         self.browser.get(self.target)
         html = self.browser.page_source
         bf = BeautifulSoup(html,"html.parser")
         catalogDiv = bf.find('div',class_='catalog-content-wrap',id='j-catalogWrap')
         print("catalogDiv: ", catalogDiv)
+        print('sleep...')
+        time.sleep(20)
+        print('woke up')
         volumeWrapDiv = catalogDiv.find('div',class_='volume-wrap')
         volumeDivs = volumeWrapDiv.find_all('div',class_='volume')
 
@@ -47,26 +48,28 @@ class downloader(object):
         mainTextWrapDiv = bf.find('div',class_='main-text-wrap')
         readContentDiv = mainTextWrapDiv.find('div',class_='read-content j_readContent')
         readContent = readContentDiv.find_all('span',class_='content-wrap')
-        if readContent == []:
-            textContent = readContentDiv.text.replace('<p>','\n')
-            textContent = textContent.replace('</p>','')
-        else:
-            for content in readContent:
-                if content.string == '':
-                    print('error format')
-                else:
-                    textContent += content.string + '\n'
+        textContent = []
+        for content in readContent:
+            if content.string == '':
+                print('error format')
+            else:
+                textContent.append(content.string + '\n')
+                print('content.string: ', content.string)
+        print('textContent: ', textContent)
         return textContent
-    def writer(self, path, name='', content=''):
+    def writer(self, path, name='', content=[]):
         write_flag = True
+        print('content: ', content)
         with open(path, 'a', 1024) as f: #a模式意為向同名檔案尾增加文字
             if name == None:
                 name=''
-            if content == None:
-                content = ''
-            f.write(name + '\n')
-            f.write(content)
-            f.write('\n')
+            f.writeline(name)
+            f.writeline('')
+            for line in content:
+                f.writeline(line)
+                f.writeline('')
+
+            f.writeline('')
 
 if __name__ == '__main__':#執行層
     target = 'https://book.qidian.com/info/1010868264#Catalog'
@@ -75,7 +78,7 @@ if __name__ == '__main__':#執行層
     print('開始下載：')
     for i in range(dlObj.chapterNum):
         try:
-            dlObj.writer( 'test.txt',dlObj.chapterNames[i], dlObj.GetChapterContent(dlObj.chapterHrefs[i]))
+            dlObj.writer('output.txt',dlObj.chapterNames[i], dlObj.GetChapterContent(dlObj.chapterHrefs[i]))
         except Exception:
             print('下載出錯，已跳過')
             pass
